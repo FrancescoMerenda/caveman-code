@@ -9,7 +9,9 @@ import { SettingsManager } from "../src/core/settings-manager.js";
 import { createTestResourceLoader } from "./utilities.js";
 
 const reasoningModel = getModel("anthropic", "claude-sonnet-4-5")!;
-const nonReasoningModel = getModel("anthropic", "claude-3-5-haiku-latest")!;
+// Every current Anthropic model reports reasoning support, so derive the
+// non-reasoning counterpart instead of naming a model the registry may flip.
+const nonReasoningModel = { ...reasoningModel, id: "claude-sonnet-4-5-no-reasoning", reasoning: false };
 
 function createSession({
 	thinkingLevel = "high",

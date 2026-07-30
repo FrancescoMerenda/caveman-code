@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
-import { getModel } from "../src/models.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { MODELS } from "../src/models.generated.js";
+import { _resetModelRegistryForTests, getModel } from "../src/models.js";
 import {
 	_clearDiscoveredCapabilitiesForTests,
 	getAnthropicCapabilities,
@@ -421,20 +422,91 @@ describe("discoverAnthropicCapabilities — anthropic native", () => {
 
 		vi.unstubAllGlobals();
 	});
+
+	it("registers model ids the generated catalog does not know yet", async () => {
+		_clearDiscoveredCapabilitiesForTests();
+		_clearDiscoveryStateForTests();
+
+		// A model published after the last models.generated.ts refresh.
+		const unknownId = "claude-sonnet-9-testonly";
+		const response = {
+			data: [
+				{
+					id: unknownId,
+					display_name: "Claude Sonnet 9 (test)",
+					max_input_tokens: 500_000,
+					max_tokens: 96_000,
+					capabilities: {
+						thinking: { supported: true, types: { adaptive: { supported: true } } },
+						effort: { max: { supported: true } },
+					},
+				},
+			],
+		};
+
+		const fetchMock = vi.fn(async () => new Response(JSON.stringify(response), { status: 200 }));
+		vi.stubGlobal("fetch", fetchMock);
+
+		expect(getModel("anthropic", unknownId as never)).toBeUndefined();
+
+		await discoverAnthropicCapabilities("anthropic", "https://api.anthropic.com", "sk-test");
+
+		const registered = getModel("anthropic", unknownId as never);
+		expect(registered).toBeDefined();
+		expect(registered.name).toBe("Claude Sonnet 9 (test)");
+		expect(registered.api).toBe("anthropic-messages");
+		expect(registered.contextWindow).toBe(500_000);
+		expect(registered.maxTokens).toBe(96_000);
+		expect(registered.reasoning).toBe(true);
+		// Pricing is inferred from the tier in the id (the listing has no cost).
+		expect(registered.cost).toEqual({ input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 });
+
+		vi.unstubAllGlobals();
+	});
+
+	it("keeps generated pricing for ids the catalog already has", async () => {
+		_clearDiscoveredCapabilitiesForTests();
+		_clearDiscoveryStateForTests();
+
+		const known = getModel("anthropic", "claude-opus-4-5");
+		const generatedCost = { ...known.cost };
+
+		const response = {
+			data: [{ id: "claude-opus-4-5", max_input_tokens: 200_000, max_tokens: 64_000, capabilities: {} }],
+		};
+		const fetchMock = vi.fn(async () => new Response(JSON.stringify(response), { status: 200 }));
+		vi.stubGlobal("fetch", fetchMock);
+
+		await discoverAnthropicCapabilities("anthropic", "https://api.anthropic.com/", "sk-test");
+
+		expect(getModel("anthropic", "claude-opus-4-5").cost).toEqual(generatedCost);
+
+		vi.unstubAllGlobals();
+	});
 });
 
 // ============================================================================
 // Registry still honors capability-table contextWindow at load time
 // ============================================================================
 
+// The generated catalog is refreshed from upstream daily, so these assert the
+// invariant (the static capability table never overrides the generated value)
+// against MODELS rather than against a literal that upstream can move.
 describe("static registry contextWindow", () => {
-	it("opus-4-5 stays at the generated 200_000 (static table does not override)", () => {
-		const m = getModel("anthropic", "claude-opus-4-5");
-		expect(m.contextWindow).toBe(200_000);
+	// Discovery tests above mutate the process-wide registry; reload the
+	// generated catalog so these assert load-time state.
+	beforeEach(() => {
+		_clearDiscoveredCapabilitiesForTests();
+		_resetModelRegistryForTests();
 	});
 
-	it("sonnet-4-5 stays at 200_000", () => {
+	it("opus-4-5 keeps the generated window (static table does not override)", () => {
+		const m = getModel("anthropic", "claude-opus-4-5");
+		expect(m.contextWindow).toBe(MODELS.anthropic["claude-opus-4-5"].contextWindow);
+	});
+
+	it("sonnet-4-5 keeps the generated window", () => {
 		const m = getModel("anthropic", "claude-sonnet-4-5");
-		expect(m.contextWindow).toBe(200_000);
+		expect(m.contextWindow).toBe(MODELS.anthropic["claude-sonnet-4-5"].contextWindow);
 	});
 });

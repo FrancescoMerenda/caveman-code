@@ -92,7 +92,10 @@ describe("lazy provider module loading", () => {
 
 	it("loads only the Anthropic SDK when dispatching through streamSimple", () => {
 		const result = runProbe(`
-			const model = mod.getModel("anthropic", "claude-sonnet-4-20250514");
+			// Registry-driven: the generated catalog is refreshed from upstream, so
+			// a hardcoded dated id would rot when the vendor retires it.
+			const anthropicModels = mod.getModels("anthropic");
+			const model = anthropicModels.find((m) => m.id.includes("haiku")) ?? anthropicModels[0];
 			const context = { messages: [{ role: "user", content: "hi" }] };
 			await mod.streamSimple(model, context).result();
 		`);

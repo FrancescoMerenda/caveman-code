@@ -689,6 +689,18 @@ async function generateModels() {
 			candidate.contextWindow = 1000000;
 		}
 
+		// models.dev reports Sonnet 4.5 at its 1M tier, but on the direct Anthropic
+		// API that tier is gated behind the `context-1m-2025-08-07` beta and the
+		// account being eligible. Advertise the ungated 200K here; runtime
+		// discovery (anthropic-discovery.ts) raises it to 1M when the account
+		// actually has the beta.
+		if (
+			candidate.provider === "anthropic" &&
+			(candidate.id === "claude-sonnet-4-5" || candidate.id === "claude-sonnet-4-5-20250929")
+		) {
+			candidate.contextWindow = 200000;
+		}
+
 		// OpenCode variants list Claude Sonnet 4/4.5 with 1M context, actual limit is 200K
 		if (
 			(candidate.provider === "opencode" || candidate.provider === "opencode-go") &&

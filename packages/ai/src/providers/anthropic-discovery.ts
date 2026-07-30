@@ -253,6 +253,8 @@ async function discoverAnthropicNative(
 		}
 	}
 
+	const discoveredModels: Model<"anthropic-messages">[] = [];
+
 	for (const entry of baseEntries) {
 		const c = entry.capabilities ?? {};
 		const thinking = c.thinking ?? {};
@@ -278,7 +280,46 @@ async function discoverAnthropicNative(
 		}
 
 		setDiscoveredCapabilities("anthropic", entry.id, caps);
+
+		// Publish the id into the registry so models released after the last
+		// models.generated.ts refresh are selectable without a CLI upgrade.
+		// Existing entries keep their generated pricing (see the merge in
+		// models.ts); only capability fields are refreshed.
+		discoveredModels.push({
+			id: entry.id,
+			name: entry.display_name || entry.id,
+			api: "anthropic-messages",
+			provider: "anthropic",
+			baseUrl,
+			reasoning: thinking.supported === true || adaptive || types.enabled?.supported === true,
+			input: c.image_input?.supported === false ? ["text"] : ["text", "image"],
+			cost: inferAnthropicCost(entry.id),
+			contextWindow: caps.contextWindow ?? DEFAULT_ANTHROPIC_CONTEXT,
+			maxTokens: entry.max_tokens ?? DEFAULT_ANTHROPIC_MAX_TOKENS,
+		});
 	}
+
+	mergeDiscoveredModels("anthropic", discoveredModels);
+}
+
+const DEFAULT_ANTHROPIC_CONTEXT = 200_000;
+const DEFAULT_ANTHROPIC_MAX_TOKENS = 64_000;
+
+/**
+ * List-published pricing per Claude tier ($ / 1M tokens). `/v1/models` does
+ * not report cost, and a brand-new id has no generated entry to inherit from,
+ * so the tier in the id is the only signal available. Known ids never reach
+ * this path — the registry merge preserves their generated pricing — so this
+ * only affects models published between two catalog refreshes. Unknown tiers
+ * report zero rather than guessing, which surfaces as "no cost data" instead
+ * of a wrong bill estimate.
+ */
+function inferAnthropicCost(modelId: string): { input: number; output: number; cacheRead: number; cacheWrite: number } {
+	const id = modelId.toLowerCase();
+	if (id.includes("haiku")) return { input: 1, output: 5, cacheRead: 0.1, cacheWrite: 1.25 };
+	if (id.includes("sonnet")) return { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3.75 };
+	if (id.includes("opus")) return { input: 5, output: 25, cacheRead: 0.5, cacheWrite: 6.25 };
+	return { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
 }
 
 async function fetchAnthropicModels(

@@ -1,7 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { getModel } from "../src/models.js";
+import { getModel, getModels } from "../src/models.js";
 import { stream } from "../src/stream.js";
-import type { Context } from "../src/types.js";
+import type { Context, Model } from "../src/types.js";
+
+/**
+ * The generated registry is refreshed from upstream (models.dev plus runtime
+ * provider discovery), so a hardcoded dated model id rots as soon as the
+ * vendor retires it. These tests only need *an* Anthropic-API model, so pick
+ * the cheapest one the registry currently knows about.
+ */
+function anthropicTestModel(): Model<"anthropic-messages"> {
+	const models = getModels("anthropic");
+	const model = models.find((m) => m.id.includes("haiku")) ?? models[0];
+	if (!model) throw new Error("no Anthropic models in registry");
+	return model as Model<"anthropic-messages">;
+}
 
 describe("Cache Retention (PI_CACHE_RETENTION)", () => {
 	const originalEnv = process.env.PI_CACHE_RETENTION;
@@ -27,7 +40,7 @@ describe("Cache Retention (PI_CACHE_RETENTION)", () => {
 		it.skipIf(!process.env.ANTHROPIC_API_KEY)(
 			"should use default cache TTL (no ttl field) when PI_CACHE_RETENTION is not set",
 			async () => {
-				const model = getModel("anthropic", "claude-3-5-haiku-20241022");
+				const model = anthropicTestModel();
 				let capturedPayload: any = null;
 
 				const s = stream(model, context, {
@@ -50,7 +63,7 @@ describe("Cache Retention (PI_CACHE_RETENTION)", () => {
 
 		it.skipIf(!process.env.ANTHROPIC_API_KEY)("should use 1h cache TTL when PI_CACHE_RETENTION=long", async () => {
 			process.env.PI_CACHE_RETENTION = "long";
-			const model = getModel("anthropic", "claude-3-5-haiku-20241022");
+			const model = anthropicTestModel();
 			let capturedPayload: any = null;
 
 			const s = stream(model, context, {
@@ -74,7 +87,7 @@ describe("Cache Retention (PI_CACHE_RETENTION)", () => {
 			process.env.PI_CACHE_RETENTION = "long";
 
 			// Create a model with a different baseUrl (simulating a proxy)
-			const baseModel = getModel("anthropic", "claude-3-5-haiku-20241022");
+			const baseModel = anthropicTestModel();
 			const proxyModel = {
 				...baseModel,
 				baseUrl: "https://my-proxy.example.com/v1",
@@ -114,7 +127,7 @@ describe("Cache Retention (PI_CACHE_RETENTION)", () => {
 		});
 
 		it("should omit cache_control when cacheRetention is none", async () => {
-			const baseModel = getModel("anthropic", "claude-3-5-haiku-20241022");
+			const baseModel = anthropicTestModel();
 			let capturedPayload: any = null;
 
 			const { streamAnthropic } = await import("../src/providers/anthropic.js");
@@ -140,7 +153,7 @@ describe("Cache Retention (PI_CACHE_RETENTION)", () => {
 		});
 
 		it("should add cache_control to string user messages", async () => {
-			const baseModel = getModel("anthropic", "claude-3-5-haiku-20241022");
+			const baseModel = anthropicTestModel();
 			let capturedPayload: any = null;
 
 			const { streamAnthropic } = await import("../src/providers/anthropic.js");
@@ -168,7 +181,7 @@ describe("Cache Retention (PI_CACHE_RETENTION)", () => {
 		});
 
 		it("should set 1h cache TTL when cacheRetention is long", async () => {
-			const baseModel = getModel("anthropic", "claude-3-5-haiku-20241022");
+			const baseModel = anthropicTestModel();
 			let capturedPayload: any = null;
 
 			const { streamAnthropic } = await import("../src/providers/anthropic.js");

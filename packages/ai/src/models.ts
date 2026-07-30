@@ -29,13 +29,27 @@ function applyCapabilityOverrides(model: Model<Api>): Model<Api> {
 	return model;
 }
 
-// Initialize registry from MODELS on module load
-for (const [provider, models] of Object.entries(MODELS)) {
-	const providerModels = new Map<string, Model<Api>>();
-	for (const [id, model] of Object.entries(models)) {
-		providerModels.set(id, applyCapabilityOverrides(model as Model<Api>));
+function loadGeneratedModels(): void {
+	modelRegistry.clear();
+	for (const [provider, models] of Object.entries(MODELS)) {
+		const providerModels = new Map<string, Model<Api>>();
+		for (const [id, model] of Object.entries(models)) {
+			providerModels.set(id, applyCapabilityOverrides(model as Model<Api>));
+		}
+		modelRegistry.set(provider, providerModels);
 	}
-	modelRegistry.set(provider, providerModels);
+}
+
+// Initialize registry from MODELS on module load
+loadGeneratedModels();
+
+/**
+ * Drop every runtime-discovered mutation and rebuild the registry from
+ * models.generated.ts. Test-only: discovery is process-wide, so a test that
+ * asserts load-time state must undo what an earlier test discovered.
+ */
+export function _resetModelRegistryForTests(): void {
+	loadGeneratedModels();
 }
 
 /**
