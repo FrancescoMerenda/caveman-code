@@ -241,6 +241,7 @@ export class TUI extends Container {
 	public onDebug?: () => void;
 	private renderRequested = false;
 	private renderTimer: NodeJS.Timeout | undefined;
+	private renderWaiters: Array<() => void> = [];
 	private lastRenderAt = 0;
 	private static readonly MIN_RENDER_INTERVAL_MS = 16;
 	private cursorRow = 0; // Logical cursor row (end of rendered content)
@@ -523,6 +524,8 @@ export class TUI extends Container {
 			clearTimeout(this.renderTimer);
 			this.renderTimer = undefined;
 		}
+		// No further frames will be painted — release anyone awaiting one.
+		this.notifyRendered();
 		// Position the cursor on a fresh line below the rendered content so the
 		// terminal's next prompt doesn't overwrite the last frame, and the full
 		// transcript stays in scrollback (matches upstream pi-mono behavior).
@@ -556,17 +559,44 @@ export class TUI extends Container {
 			this.renderRequested = true;
 			process.nextTick(() => {
 				if (this.stopped || !this.renderRequested) {
+					this.notifyRendered();
 					return;
 				}
 				this.renderRequested = false;
 				this.lastRenderAt = performance.now();
 				this.doRender();
+				this.notifyRendered();
 			});
 			return;
 		}
 		if (this.renderRequested) return;
 		this.renderRequested = true;
 		process.nextTick(() => this.scheduleRender());
+	}
+
+	/**
+	 * Resolves once the pending render has been written to the terminal.
+	 *
+	 * Rendering is throttled to one frame per MIN_RENDER_INTERVAL_MS and is
+	 * scheduled on a timer, so `start()` / `requestRender()` do not paint
+	 * synchronously. Anything that needs to observe the painted output — tests,
+	 * diagnostics — must await this instead of assuming the frame is already
+	 * out. Resolves immediately when no render is pending.
+	 */
+	whenRendered(): Promise<void> {
+		if (this.stopped || (!this.renderRequested && !this.renderTimer)) {
+			return Promise.resolve();
+		}
+		return new Promise<void>((resolve) => {
+			this.renderWaiters.push(resolve);
+		});
+	}
+
+	private notifyRendered(): void {
+		if (this.renderWaiters.length === 0) return;
+		const waiters = this.renderWaiters;
+		this.renderWaiters = [];
+		for (const resolve of waiters) resolve();
 	}
 
 	private scheduleRender(): void {
@@ -578,6 +608,7 @@ export class TUI extends Container {
 		this.renderTimer = setTimeout(() => {
 			this.renderTimer = undefined;
 			if (this.stopped || !this.renderRequested) {
+				this.notifyRendered();
 				return;
 			}
 			this.renderRequested = false;
@@ -585,6 +616,8 @@ export class TUI extends Container {
 			this.doRender();
 			if (this.renderRequested) {
 				this.scheduleRender();
+			} else {
+				this.notifyRendered();
 			}
 		}, delay);
 	}

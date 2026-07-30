@@ -277,12 +277,15 @@ export function createWriteToolDefinition(
 		},
 		renderResult(result, _options, theme, context) {
 			const output = formatWriteResult({ ...result, isError: context.isError }, theme);
+			// lastComponent alternates between Container (no output) and Text, so it
+			// has to be type-checked before reuse — casting one to the other and
+			// calling setText throws, and the caller swallows that into a fallback.
 			if (!output) {
-				const component = (context.lastComponent as Container | undefined) ?? new Container();
+				const component = context.lastComponent instanceof Container ? context.lastComponent : new Container();
 				component.clear();
 				return component;
 			}
-			const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
+			const text = context.lastComponent instanceof Text ? context.lastComponent : new Text("", 0, 0);
 			text.setText(output);
 			return text;
 		},

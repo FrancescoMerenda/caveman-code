@@ -298,19 +298,26 @@ export function createEditToolDefinition(
 			return text;
 		},
 		renderResult(result, _options, theme, context) {
-			if (!context.expanded && !context.isError) {
-				// Collapsed: show nothing (header already shows file path)
-				const component = (context.lastComponent as Container | undefined) ?? new Container();
+			// lastComponent is whatever this renderer returned last time, which
+			// alternates between Container (collapsed / empty) and Text (diff). It
+			// must be type-checked before reuse: casting a Container to Text and
+			// calling setText throws, and the caller swallows that into a fallback
+			// render — which is how expanding a collapsed diff used to show nothing.
+			const reuseContainer = () => {
+				const component = context.lastComponent instanceof Container ? context.lastComponent : new Container();
 				component.clear();
 				return component;
+			};
+
+			if (!context.expanded && !context.isError) {
+				// Collapsed: show nothing (header already shows file path)
+				return reuseContainer();
 			}
 			const output = formatEditResult(context.args, result as any, theme, context.isError);
 			if (!output) {
-				const component = (context.lastComponent as Container | undefined) ?? new Container();
-				component.clear();
-				return component;
+				return reuseContainer();
 			}
-			const text = (context.lastComponent as Text | undefined) ?? new Text("", 0, 0);
+			const text = context.lastComponent instanceof Text ? context.lastComponent : new Text("", 0, 0);
 			text.setText(output);
 			return text;
 		},

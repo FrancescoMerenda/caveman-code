@@ -636,11 +636,19 @@ export class AgentSession {
 		// then soft compression. Memory and repomap hit different backends so we
 		// run them concurrently and merge the two injections before compaction.
 		this.agent.transformContext = async (messages) => {
+			// Extension `context` handlers run first, on the real conversation,
+			// before the session's own retrieval injections and soft compaction
+			// (size-sensitive context engineering that extensions should not have
+			// to re-derive). This assignment replaces any transformContext the
+			// agent was constructed with, so the extension hop has to happen here
+			// or `context` handlers never fire in a session.
+			const runner = this._extensionRunner;
+			const base = runner?.hasHandlers("context") ? await runner.emitContext(messages) : messages;
 			const [afterMemory, afterRepomap] = await Promise.all([
-				this._buildMemoryTransform(messages),
-				this._buildRepomapTransform(messages),
+				this._buildMemoryTransform(base),
+				this._buildRepomapTransform(base),
 			]);
-			const merged = this._mergeRetrievalInjections(messages, afterMemory, afterRepomap);
+			const merged = this._mergeRetrievalInjections(base, afterMemory, afterRepomap);
 			return this._softCompactTransform(merged);
 		};
 
@@ -2221,8 +2229,13 @@ export class AgentSession {
 		previousModel: Model<any> | undefined,
 		source: "set" | "cycle" | "restore",
 	): Promise<void> {
-		if (!this._extensionRunner) return;
 		if (modelsAreEqual(previousModel, nextModel)) return;
+		// A model switch can land before the constructor's async `_buildRuntime`
+		// has created `_extensionRunner` (the UI and the SDK can both call
+		// setModel right after `new AgentSession()`). Without this await the
+		// event is silently dropped. Re-awaiting a settled promise is cheap.
+		await this._initialRuntimeReady;
+		if (!this._extensionRunner) return;
 		await this._extensionRunner.emit({
 			type: "model_select",
 			model: nextModel,

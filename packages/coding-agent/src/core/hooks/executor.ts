@@ -206,6 +206,12 @@ export class HooksExecutor {
 				});
 			});
 
+			// A hook that never reads stdin (`echo hi`) closes the pipe while we are
+			// still writing. That EPIPE is reported asynchronously on the stream, so
+			// try/catch cannot see it and an unhandled 'error' event would take the
+			// whole process down. Swallow it here — the child's exit code and output
+			// are what we actually care about.
+			child.stdin?.on("error", () => {});
 			try {
 				child.stdin?.write(JSON.stringify(stdin));
 				child.stdin?.end();

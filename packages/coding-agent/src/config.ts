@@ -189,10 +189,20 @@ export const APP_NAME: string = appConfig.name || "pi";
 export const CONFIG_DIR_NAME: string = appConfig.configDir || ".pi";
 export const VERSION: string = pkg.version;
 
+/**
+ * Prefix for this app's environment variables (e.g. CAVE_CODING_AGENT_DIR).
+ *
+ * Taken from `caveConfig.envPrefix`, falling back to the app name. Any
+ * character that is not [A-Z0-9] collapses to "_": deriving straight from the
+ * app name would yield `CAVEMAN-CODE_CODING_AGENT_DIR`, which no POSIX shell
+ * can `export`, so the variable would be unsettable in practice.
+ */
+export const ENV_PREFIX: string = (appConfig.envPrefix || APP_NAME).toUpperCase().replace(/[^A-Z0-9]+/g, "_");
+
 // e.g., CAVE_CODING_AGENT_DIR
-export const ENV_AGENT_DIR = `${APP_NAME.toUpperCase()}_CODING_AGENT_DIR`;
-export const ENV_PACKAGE_DIR = `${APP_NAME.toUpperCase()}_PACKAGE_DIR`;
-export const ENV_SHARE_VIEWER_URL = `${APP_NAME.toUpperCase()}_SHARE_VIEWER_URL`;
+export const ENV_AGENT_DIR = `${ENV_PREFIX}_CODING_AGENT_DIR`;
+export const ENV_PACKAGE_DIR = `${ENV_PREFIX}_PACKAGE_DIR`;
+export const ENV_SHARE_VIEWER_URL = `${ENV_PREFIX}_SHARE_VIEWER_URL`;
 
 const DEFAULT_SHARE_VIEWER_URL = "";
 

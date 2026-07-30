@@ -110,6 +110,11 @@ async function runCommand(command: string, ctx: StatusLineContext): Promise<Stat
 			resolve({ text: sanitizeOneLine(stdout), source: "command", stderr: stderr.trim() || undefined });
 		});
 
+		// A status-line command that ignores stdin closes the pipe mid-write. The
+		// resulting EPIPE arrives asynchronously as an 'error' event, which would
+		// be unhandled and crash the process, so absorb it here — the command's
+		// stdout and exit code are what matter.
+		child.stdin.on("error", () => {});
 		try {
 			child.stdin.write(JSON.stringify(ctx));
 			child.stdin.end();
