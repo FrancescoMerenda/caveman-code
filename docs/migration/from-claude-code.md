@@ -97,7 +97,7 @@ If any of these report mismatches, [open an issue](https://github.com/JuliusBrus
 
 ## Why not just use Claude Code?
 
-- **Cost.** Caveman Mode compression saves $1.70-$6.92 per typical session (proven in `npm run bench:offline`).
+- **Cost.** Caveman Mode compression saves $1.70-$6.92 per typical session (proven in `bun run bench:offline`).
 - **Provider flexibility.** Use ChatGPT Plus, Copilot, Gemini, or any OpenAI-compatible endpoint.
 - **Session branching.** `/tree`, `/fork` — no major competitor has this.
 - **MIT.** No vendor lock-in; self-host the daemon.

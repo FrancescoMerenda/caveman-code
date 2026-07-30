@@ -51,7 +51,7 @@ This is the comparison table from the v2 master plan, kept current as features l
 **1.93× fewer tokens for ~equivalent pass rate.** Reproduce in one command:
 
 ```bash
-npx tsx research/evals/run-honest-bench.ts --tools caveman,codex
+bun research/evals/run-honest-bench.ts --tools caveman,codex
 ```
 
 Raw CSV and per-task logs live in [`research/results/`](https://github.com/JuliusBrussee/caveman-cli/tree/main/research/results). Methodology spawns each CLI as a real child process — no SDK shortcuts.

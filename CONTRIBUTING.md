@@ -22,10 +22,26 @@ We use an approval gate for new contributors:
 
 This exists because AI makes it trivial to generate plausible-looking but low-quality contributions. The issue step lets us filter early.
 
+## Local Setup
+
+The toolchain is [bun](https://bun.sh) (>= 1.2). `bun.lock` is the committed
+lockfile; there is no `package-lock.json`.
+
+```bash
+bun install          # install all workspace deps
+bun run build        # build every package, in dependency order
+bun run test         # run every package's test script
+bun packages/coding-agent/src/cli.ts   # run the CLI from source, no build step
+```
+
+Node.js 20+ still needs to be on `PATH`: `packages/tui` tests run on
+`node --test`, the profiling scripts profile the Node runtime, and the
+published packages target Node.
+
 ## Before Submitting a PR
 
 ```bash
-npm run check  # must pass with no errors
+bun run check  # must pass with no errors
 ./test.sh      # must pass
 ```
 

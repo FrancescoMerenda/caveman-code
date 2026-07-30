@@ -17,11 +17,14 @@ jobs:
       CAVE_BENCH_INSTANCE_COUNT: ${{ inputs.instance_count || '50' }}
     steps:
       - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - run: npm ci
-      - run: npm run bench:nightly
+          node-version: "22"
+      - run: bun install --frozen-lockfile
+      - run: bun run bench:nightly
       - name: Commit results
         run: |
           git config user.name "cave-bot"

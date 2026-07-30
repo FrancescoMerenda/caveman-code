@@ -27,6 +27,6 @@ OUT_DIR="${OUT_DIR:-${PROOF_BENCH}/results/$(date +%Y%m%d-%H%M%S)}"
 mkdir -p "${OUT_DIR}"
 
 echo "Running full suite → ${OUT_DIR}  (max-cost=\$${MAX_COST})"
-npx tsx "${PROOF_BENCH}/run.ts" \
+bun "${PROOF_BENCH}/run.ts" \
   --max-cost "${MAX_COST}" \
   --out-dir "${OUT_DIR}"

@@ -4,7 +4,7 @@ name: auto-update-models
 # Regenerates from public upstream sources; when the catalog actually changes it
 # builds, tests, bumps the version, commits to main, tags, and dispatches the
 # existing Release workflow (build-binaries.yml) so installed CLIs pick up new
-# models on the next npm update / reinstall.
+# models on the next package update / reinstall.
 
 on:
   schedule:
@@ -22,15 +22,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      # Node is still needed by the tui test runner (node --test).
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
 
-      - run: npm ci
+      - run: bun install --frozen-lockfile
 
       - name: Regenerate model registry
-        run: npm run generate-models -w @juliusbrussee/caveman-ai
+        run: bun run --cwd packages/ai generate-models
 
       - name: Detect change
         id: diff
@@ -44,8 +48,8 @@ jobs:
       - name: Build + test (gate release)
         if: steps.diff.outputs.changed == 'true'
         run: |
-          npm run build
-          npm test --workspaces --if-present
+          bun run build
+          bun run test
 
       - name: Bump, commit, tag, release
         if: steps.diff.outputs.changed == 'true'
@@ -54,8 +58,8 @@ jobs:
         run: |
           git config user.name  "cave-bot"
           git config user.email "bot@cave.local"
-          npm run version:patch
-          VERSION=$(node -p "require('./packages/ai/package.json').version")
+          bun run version:patch
+          VERSION=$(bun --print "require('./packages/ai/package.json').version")
           git add -A
           git commit -m "chore(models): daily registry refresh → release v${VERSION}"
           git tag "v${VERSION}"

@@ -59,7 +59,7 @@ That is the entire product. Everything below is the coding agent it ships inside
 > No marketing-deck baselines. Each tool spawned as a real child process. Each task verified by a task-specific `verify.sh`. Raw CSV + per-task logs published.
 
 ```bash
-npx tsx research/evals/run-honest-bench.ts --tools caveman,codex   # reproduce in one command
+bun research/evals/run-honest-bench.ts --tools caveman,codex   # reproduce in one command
 ```
 
 [Raw CSV](research/results/honest-bench-2026-05-18.csv) · [Aggregate JSON](research/results/honest-bench-2026-05-18.json) · [Methodology](research/README.md) · [25 task prompts](research/evals/microbench/tasks/)
@@ -159,9 +159,9 @@ Pays for itself after one tool call.
 | Net savings — 30-turn session | **+1.13M tokens (~$6.92, Sonnet)** |
 
 ```bash
-npm run bench:offline   # compression analysis — free, <1s
-npm run bench:replay    # analyze your real sessions — free
-npm run bench:live      # A/B with live LLM calls — needs API key
+bun run bench:offline   # compression analysis — free, <1s
+bun run bench:replay    # analyze your real sessions — free
+bun run bench:live      # A/B with live LLM calls — needs API key
 ```
 
 </details>
@@ -238,7 +238,7 @@ caveman mcp-server          # run caveman itself as an MCP server (Codex-compati
 ```
 
 ### 🧠 Memory via cavemem
-Persistent memory delegated to [cavemem](https://github.com/JuliusBrussee/cavemem) (MIT, hybrid BM25 + local vectors). Agent has two native tools — `memory_search` and `memory_save`; relevant recall is auto-injected each turn.
+Persistent memory delegated to [cavemem](https://github.com/FrancescoMerenda/cavemem) (MIT, hybrid BM25 + local vectors). Agent has two native tools — `memory_search` and `memory_save`; relevant recall is auto-injected each turn.
 ```bash
 /memory search "auth migration"
 /memory consolidate            # cluster recent observations into semantic facts

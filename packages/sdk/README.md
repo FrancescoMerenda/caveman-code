@@ -14,5 +14,5 @@ await client.send(session.id, "what does this codebase do?");
 ```
 
 The hand-written client tracks the OpenAPI 3.0.3 spec by hand. Regeneration
-hook is `npm run codegen` (TODO(ws9-codegen): wire `openapi-typescript-codegen`
+hook is `bun run codegen` (TODO(ws9-codegen): wire `openapi-typescript-codegen`
 in CI before v2.1).

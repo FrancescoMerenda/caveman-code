@@ -27,7 +27,7 @@ OUT_DIR="${OUT_DIR:-${PROOF_BENCH}/results/smoke-$(date +%Y%m%d-%H%M%S)}"
 mkdir -p "${OUT_DIR}"
 
 echo "Running smoke suite → ${OUT_DIR}"
-npx tsx "${PROOF_BENCH}/run.ts" \
+bun "${PROOF_BENCH}/run.ts" \
   --smoke \
   --max-cost 1 \
   --out-dir "${OUT_DIR}"

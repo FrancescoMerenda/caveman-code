@@ -56,15 +56,16 @@ if [[ -n "$PLATFORM" ]]; then
 fi
 
 echo "==> Installing dependencies..."
-npm ci
+bun install --frozen-lockfile
 
 if [[ "$SKIP_DEPS" == "false" ]]; then
     echo "==> Installing cross-platform native bindings..."
-    # npm ci only installs optional deps for the current platform
-    # We need all platform bindings for bun cross-compilation
-    # Use --force to bypass platform checks (os/cpu restrictions in package.json)
-    # Install all in one command to avoid npm removing packages from previous installs
-    npm install --no-save --force \
+    # A normal install only unpacks the optional deps matching the host
+    # platform. Bun cross-compilation needs every target's bindings, so
+    # --os='*' --cpu='*' bypasses the os/cpu gates in those packages.
+    # --no-save keeps package.json/bun.lock untouched.
+    # Install all in one command to avoid removing packages from previous installs.
+    bun add --no-save --os='*' --cpu='*' \
         @mariozechner/clipboard-darwin-arm64@0.3.0 \
         @mariozechner/clipboard-darwin-x64@0.3.0 \
         @mariozechner/clipboard-linux-x64-gnu@0.3.0 \
@@ -84,7 +85,7 @@ else
 fi
 
 echo "==> Building all packages..."
-npm run build
+bun run build
 
 echo "==> Building binaries..."
 cd packages/coding-agent
@@ -120,7 +121,7 @@ for platform in "${PLATFORMS[@]}"; do
     cp package.json binaries/$platform/
     cp README.md binaries/$platform/
     cp CHANGELOG.md binaries/$platform/
-    cp ../../node_modules/@silvia-odwyer/photon-node/photon_rs_bg.wasm binaries/$platform/
+    bun ../../scripts/copy-binary-deps.mjs "binaries/$platform"
     mkdir -p binaries/$platform/theme
     cp dist/modes/interactive/theme/*.json binaries/$platform/theme/
     cp -r dist/core/export-html binaries/$platform/
@@ -129,10 +130,7 @@ for platform in "${PLATFORMS[@]}"; do
 
     # Copy koffi native module for Windows (needed for VT input support)
     if [[ "$platform" == "windows-x64" ]]; then
-        mkdir -p binaries/$platform/node_modules/koffi/build/koffi/win32_x64
-        cp ../../node_modules/koffi/index.js binaries/$platform/node_modules/koffi/
-        cp ../../node_modules/koffi/package.json binaries/$platform/node_modules/koffi/
-        cp ../../node_modules/koffi/build/koffi/win32_x64/koffi.node binaries/$platform/node_modules/koffi/build/koffi/win32_x64/
+        bun ../../scripts/copy-binary-deps.mjs "binaries/$platform" --koffi
     fi
 done
 

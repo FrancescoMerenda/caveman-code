@@ -6,15 +6,15 @@ VitePress source for [getcaveman.dev/docs](https://getcaveman.dev/docs).
 
 ```bash
 cd docs/
-npm install
-npm run dev          # http://localhost:5173/docs/
+bun install
+bun run dev          # http://localhost:5173/docs/
 ```
 
 ## Build
 
 ```bash
-npm run build        # outputs to docs/.vitepress/dist/
-npm run preview      # serves the built site
+bun run build        # outputs to docs/.vitepress/dist/
+bun run preview      # serves the built site
 ```
 
 ## Structure

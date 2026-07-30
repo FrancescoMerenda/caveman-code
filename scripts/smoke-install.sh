@@ -3,7 +3,7 @@
 # Local installer smoke test: build the host-platform tarball, serve it over
 # HTTP, run install.sh against it into a temp prefix, then exercise --version.
 #
-# Run via: npm run smoke:install
+# Run via: bun run smoke:install
 
 set -euo pipefail
 

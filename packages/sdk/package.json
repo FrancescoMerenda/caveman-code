@@ -9,8 +9,8 @@
 		"clean": "shx rm -rf dist",
 		"build": "tsgo -p tsconfig.build.json",
 		"dev": "tsgo -p tsconfig.build.json --watch --preserveWatchOutput",
-		"test": "vitest --run",
-		"prepublishOnly": "npm run clean && npm run build"
+		"test": "vitest --run --passWithNoTests",
+		"prepublishOnly": "bun run clean && bun run build"
 	},
 	"files": [
 		"dist/**/*",

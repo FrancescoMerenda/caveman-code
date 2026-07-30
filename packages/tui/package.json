@@ -8,8 +8,8 @@
 		"clean": "shx rm -rf dist",
 		"build": "tsgo -p tsconfig.build.json",
 		"dev": "tsgo -p tsconfig.build.json --watch --preserveWatchOutput",
-		"test": "node --test --import tsx test/*.test.ts",
-		"prepublishOnly": "npm run clean && npm run build"
+		"test": "node --test --import tsx test/*.test.ts && vitest --run",
+		"prepublishOnly": "bun run clean && bun run build"
 	},
 	"files": [
 		"dist/**/*",
@@ -47,7 +47,8 @@
 	},
 	"devDependencies": {
 		"@xterm/headless": "^5.5.0",
-		"@xterm/xterm": "^5.5.0"
+		"@xterm/xterm": "^5.5.0",
+		"vitest": "^3.2.4"
 	},
 	"homepage": "https://github.com/JuliusBrussee/caveman-code#readme",
 	"bugs": {

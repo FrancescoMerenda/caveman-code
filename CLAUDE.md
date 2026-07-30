@@ -22,10 +22,10 @@ Minimal terminal coding agent + multi-provider LLM toolkit. TypeScript monorepo.
 ## Key Commands
 
 ```bash
-npm install          # install all deps
-npm run build        # build all packages
-npm run lint         # biome lint
-npm run format       # biome format
+bun install          # install all deps
+bun run build        # build all packages
+bun run lint         # biome lint
+bun run format       # biome format
 ```
 
 ## Context Hierarchy
@@ -38,7 +38,16 @@ Legacy CaveKit kits/plans/impl have been moved to `context/archive/`.
 - Biome for lint/format (not ESLint/Prettier). Config: `biome.json`.
 - TypeScript strict. Shared tsconfig: `tsconfig.base.json`.
 - Package scope: `@juliusbrussee/caveman-*` (all packages on npm). Main CLI package: `@juliusbrussee/caveman-code`. Bin registers `caveman` AND `caveman-code` aliases.
-- Node.js 20+.
+- **bun is the package manager and script runner.** `bun.lock` is committed;
+  there is no `package-lock.json`. No script may call `npm`/`npx` — the npm
+  workspace verbs are replaced by `scripts/bump-versions.mjs` (version bump)
+  and `scripts/publish-all.mjs` (publish). CI installs with
+  `bun install --frozen-lockfile`.
+- Node.js 20+ still required on PATH (tui tests run `node --test`, profiling
+  scripts profile the Node runtime, published packages target Node).
+- Every runtime import must be a declared dependency: bun does not flat-hoist
+  transitive deps the way npm does, so an undeclared import that "worked"
+  under npm fails to resolve under bun.
 
 ## Current State (2026-05-01)
 
@@ -57,6 +66,13 @@ Legacy CaveKit kits/plans/impl have been moved to `context/archive/`.
 - **Goal loop (in-flight, untracked):**
   `packages/coding-agent/src/core/goal-loop/` — `goal-runner`, `goal-state`,
   `goal-prompts`. Not yet committed; dev work on `strip/permissions`.
+- **Anthropic model list self-updates.** `packages/ai/src/models.generated.ts`
+  is refreshed daily by `.github/workflows/auto-update-models.yml`, and at
+  runtime `providers/anthropic-discovery.ts` registers every id returned by
+  `GET /v1/models` into the in-memory registry — so a model released after the
+  installed build still shows up in the picker. New ids get list pricing
+  inferred from their tier (haiku/sonnet/opus); known ids keep generated
+  pricing.
 - **Walkthrough doc:** `context/notes/agent-loop-walkthrough.md` traces the
   full path from `caveman` boot → `interactive-mode` dispatch → `session.prompt`
   → `agent-loop.runLoop`. Read this first when touching the loop.

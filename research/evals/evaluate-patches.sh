@@ -18,7 +18,7 @@ RUN_ID="cave-eval-$(date -u +%Y%m%d-%H%M)"
 
 if [ ! -f "$PREDICTIONS" ]; then
 	echo "ERROR: Predictions file not found: $PREDICTIONS"
-	echo "Run the benchmark first: npx tsx research/evals/run-swebench.ts"
+	echo "Run the benchmark first: bun research/evals/run-swebench.ts"
 	exit 1
 fi
 
