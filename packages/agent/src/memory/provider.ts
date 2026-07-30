@@ -6,7 +6,7 @@
  *   - FilesProvider   (fallback — CLAUDE.md + plain `.cave/memory/*.md`)
  *
  * Cave never reimplements embeddings, FTS, or compression: those are the
- * canonical responsibility of the cavemem backend (github.com/JuliusBrussee/cavemem).
+ * canonical responsibility of the cavemem backend (github.com/FrancescoMerenda/cavemem).
  * Cave's value-add lives one layer up:
  *   - The `consolidate()` pass clusters episodic observations and asks an LLM
  *     to extract semantic facts that are written back with provenance ids.
