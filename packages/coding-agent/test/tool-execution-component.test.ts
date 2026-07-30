@@ -107,6 +107,9 @@ describe("ToolExecutionComponent parity", () => {
 			(update) => updates.push(update as { content: Array<{ type: string; text?: string }>; details?: unknown }),
 			{} as never,
 		);
+		// The initial empty update is emitted after `resolveSpawnContext` resolves,
+		// so it lands on a later microtask than the execute() call.
+		await new Promise((resolve) => setTimeout(resolve, 0));
 		expect(updates).toEqual([{ content: [], details: undefined }]);
 		await promise;
 	});
@@ -140,6 +143,8 @@ describe("ToolExecutionComponent parity", () => {
 			createFakeTui(),
 		);
 		component.updateResult({ content: [{ type: "text", text: "hello" }], details: undefined, isError: false }, false);
+		// Built-in result renderers collapse by default; the payload only shows when expanded.
+		component.setExpanded(true);
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("override call");
 		expect(rendered).toContain("hello");
@@ -277,6 +282,7 @@ describe("ToolExecutionComponent parity", () => {
 			createWriteToolDefinition(process.cwd()),
 			createFakeTui(),
 		);
+		component.setExpanded(true);
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("one");
 		expect(rendered).toContain("two");
@@ -296,6 +302,7 @@ describe("ToolExecutionComponent parity", () => {
 			{ content: [{ type: "text", text: "one\ntwo\n" }], details: undefined, isError: false },
 			false,
 		);
+		component.setExpanded(true);
 		const rendered = stripAnsi(component.render(120).join("\n"));
 		expect(rendered).toContain("one");
 		expect(rendered).toContain("two");

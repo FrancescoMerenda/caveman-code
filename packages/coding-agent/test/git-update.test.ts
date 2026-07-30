@@ -12,12 +12,16 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { CONFIG_DIR_NAME } from "../src/config.js";
 import { DefaultPackageManager } from "../src/core/package-manager.js";
 import { SettingsManager } from "../src/core/settings-manager.js";
 
-// Helper to run git commands in a directory
+// Helper to run git commands in a directory.
+// Commit/tag signing is forced off: a contributor with `commit.gpgsign=true`
+// in their global config would otherwise have every fixture commit here block
+// on a pinentry prompt and fail.
 function git(args: string[], cwd: string): string {
-	const result = spawnSync("git", args, {
+	const result = spawnSync("git", ["-c", "commit.gpgsign=false", "-c", "tag.gpgsign=false", ...args], {
 		cwd,
 		encoding: "utf-8",
 	});
@@ -396,7 +400,7 @@ describe("DefaultPackageManager git update", () => {
 			createCommit(remoteDir, "extension.ts", "// v2", "Second commit");
 
 			// The project-scope install path should not exist before or after update
-			const projectGitDir = join(tempDir, ".pi", "git", "github.com", "test", "extension");
+			const projectGitDir = join(tempDir, CONFIG_DIR_NAME, "git", "github.com", "test", "extension");
 			expect(existsSync(projectGitDir)).toBe(false);
 
 			await packageManager.update(gitSource);

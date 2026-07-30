@@ -3,6 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { ENV_AGENT_DIR } from "../../../src/config.js";
 
 /**
  * Regression test for https://github.com/badlogic/pi-mono/issues/2791
@@ -51,7 +52,7 @@ describe("issue #2791 fs.watch error event crashes process", () => {
 			`
 import { setTheme, stopThemeWatcher } from "${themeModulePath}";
 
-process.env.PI_CODING_AGENT_DIR = "${agentDir}";
+process.env["${ENV_AGENT_DIR}"] = "${agentDir}";
 
 setTheme("custom-test", true);
 
@@ -87,10 +88,12 @@ process.exit(0);
 		let stderr = "";
 		let exitCode: number;
 		try {
-			_stdout = execFileSync("npx", ["tsx", scriptPath], {
+			// Node, not bun: the probe uses process._getActiveHandles(), which bun
+			// does not populate with fs watchers.
+			_stdout = execFileSync("node", ["--import", "tsx", scriptPath], {
 				timeout: 10000,
 				encoding: "utf-8",
-				env: { ...process.env, PI_CODING_AGENT_DIR: agentDir },
+				env: { ...process.env, [ENV_AGENT_DIR]: agentDir },
 				stdio: ["pipe", "pipe", "pipe"],
 			});
 			exitCode = 0;

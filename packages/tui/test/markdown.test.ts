@@ -592,6 +592,7 @@ describe("Markdown component", () => {
 			const component = new MarkdownWithInput(markdown);
 			tui.addChild(component);
 			tui.start();
+			await tui.whenRendered();
 			await terminal.flush();
 
 			assert.ok(component.markdownLineCount > 0);
@@ -1032,6 +1033,7 @@ bar`,
 			const tui = new TUI(terminal);
 			tui.addChild(markdown);
 			tui.start();
+			await tui.whenRendered();
 			await terminal.flush();
 
 			const renderedLine = markdown.render(80)[0];

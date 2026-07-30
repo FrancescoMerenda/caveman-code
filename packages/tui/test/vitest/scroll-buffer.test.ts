@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ScrollBuffer } from "../src/scroll-buffer.js";
+import { ScrollBuffer } from "../../src/scroll-buffer.js";
 
 function range(n: number, prefix = "line"): string[] {
 	return Array.from({ length: n }, (_, i) => `${prefix} ${i + 1}`);

@@ -165,6 +165,11 @@ export async function createHarness(options: HarnessOptions = {}): Promise<Harne
 		extensionRunnerRef,
 	});
 
+	// AgentSession wires extensions, tools and the base system prompt in an
+	// async constructor task. Hand back a session that is actually ready, so
+	// tests can inspect `extensionRunner` or switch models without racing it.
+	await session.whenReady;
+
 	const events: AgentSessionEvent[] = [];
 	session.subscribe((event) => {
 		events.push(event);

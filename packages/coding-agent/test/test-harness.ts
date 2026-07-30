@@ -442,5 +442,9 @@ export async function createHarnessWithExtensions(options: HarnessOptions = {}):
 	const tempDir = createTempDir();
 	const extensionsResult = await createTestExtensionsResult(options.extensionFactories ?? [], tempDir);
 	const resourceLoader = options.resourceLoader ?? createTestResourceLoader({ extensionsResult });
-	return createHarnessWithResourceLoader(options, resourceLoader, tempDir);
+	const harness = createHarnessWithResourceLoader(options, resourceLoader, tempDir);
+	// The extension runner is wired by an async constructor task; callers of the
+	// extension-aware harness expect `session.extensionRunner` to be live.
+	await harness.session.whenReady;
+	return harness;
 }

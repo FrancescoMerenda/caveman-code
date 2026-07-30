@@ -129,8 +129,21 @@ describe("edit tool TUI rendering", () => {
 		expect(tui.fullRedraws).toBe(redrawsBeforeResult);
 		expect(terminal.fullClearCount).toBe(clearsBeforeResult);
 
-		const settledRender = component.render(80).join("\n");
-		expect(settledRender).toContain("line 50 changed");
-		expect(settledRender).toContain("line 950 changed");
+		// The settled result stays collapsed — the edit renderer deliberately
+		// shows only the header there (see renderResult in core/tools/edit.ts).
+		const collapsedRender = component.render(80).join("\n");
+		expect(collapsedRender).not.toContain("line 50 changed");
+
+		// Expanding is what reveals the diff, and it still must not force a full redraw.
+		component.setExpanded(true);
+		tui.requestRender();
+		await waitForRender();
+
+		expect(tui.fullRedraws).toBe(redrawsBeforeResult);
+		expect(terminal.fullClearCount).toBe(clearsBeforeResult);
+
+		const expandedRender = component.render(80).join("\n");
+		expect(expandedRender).toContain("line 50 changed");
+		expect(expandedRender).toContain("line 950 changed");
 	});
 });

@@ -73,12 +73,14 @@ describe("TUI resize handling", () => {
 
 			component.lines = ["Line 0", "Line 1", "Line 2"];
 			tui.start();
+			await tui.whenRendered();
 			await terminal.flush();
 
 			const initialRedraws = tui.fullRedraws;
 
 			// Resize height
 			terminal.resize(40, 15);
+			await tui.whenRendered();
 			await terminal.flush();
 
 			// Should have triggered a full redraw
@@ -100,12 +102,14 @@ describe("TUI resize handling", () => {
 
 			component.lines = Array.from({ length: 20 }, (_, i) => `Line ${i}`);
 			tui.start();
+			await tui.whenRendered();
 			await terminal.flush();
 			terminal.clearWrites();
 
 			const initialRedraws = tui.fullRedraws;
 			for (const height of [15, 8, 14, 11]) {
 				terminal.resize(40, height);
+				await tui.whenRendered();
 				await terminal.flush();
 			}
 
@@ -128,12 +132,14 @@ describe("TUI resize handling", () => {
 
 		component.lines = ["Line 0", "Line 1", "Line 2"];
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		const initialRedraws = tui.fullRedraws;
 
 		// Resize width
 		terminal.resize(60, 10);
+		await tui.whenRendered();
 		await terminal.flush();
 
 		// Should have triggered a full redraw
@@ -154,6 +160,7 @@ describe("TUI content shrinkage", () => {
 		// Start with many lines
 		component.lines = ["Line 0", "Line 1", "Line 2", "Line 3", "Line 4", "Line 5"];
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		const initialRedraws = tui.fullRedraws;
@@ -161,6 +168,7 @@ describe("TUI content shrinkage", () => {
 		// Shrink to fewer lines
 		component.lines = ["Line 0", "Line 1"];
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		// Should have triggered a full redraw to clear empty rows
@@ -185,11 +193,13 @@ describe("TUI content shrinkage", () => {
 
 		component.lines = ["Line 0", "Line 1", "Line 2", "Line 3"];
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		// Shrink to single line
 		component.lines = ["Only line"];
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		const viewport = terminal.getViewport();
@@ -208,11 +218,13 @@ describe("TUI content shrinkage", () => {
 
 		component.lines = ["Line 0", "Line 1", "Line 2"];
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		// Shrink to empty
 		component.lines = [];
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		const viewport = terminal.getViewport();
@@ -234,17 +246,20 @@ describe("TUI differential rendering", () => {
 		// Initial render: 5 identical lines
 		component.lines = ["Line 0", "Line 1", "Line 2", "Line 3", "Line 4"];
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		// Shrink to 3 lines, all identical to before (no content changes in remaining lines)
 		component.lines = ["Line 0", "Line 1", "Line 2"];
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		// cursorRow should be 2 (last line of new content)
 		// Verify by doing another render with a change on line 1
 		component.lines = ["Line 0", "CHANGED", "Line 2"];
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		const viewport = terminal.getViewport();
@@ -263,6 +278,7 @@ describe("TUI differential rendering", () => {
 		// Initial render
 		component.lines = ["Header", "Working...", "Footer"];
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		// Simulate spinner animation - only middle line changes
@@ -270,6 +286,7 @@ describe("TUI differential rendering", () => {
 		for (const frame of spinnerFrames) {
 			component.lines = ["Header", `Working ${frame}`, "Footer"];
 			tui.requestRender();
+			await tui.whenRendered();
 			await terminal.flush();
 
 			const viewport = terminal.getViewport();
@@ -289,6 +306,7 @@ describe("TUI differential rendering", () => {
 
 		component.lines = ["\x1b[3mItalic", "Plain"];
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		assert.strictEqual(getCellItalic(terminal, 1, 0), 0);
@@ -303,11 +321,13 @@ describe("TUI differential rendering", () => {
 
 		component.lines = ["Line 0", "Line 1", "Line 2", "Line 3"];
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		// Change only first line
 		component.lines = ["CHANGED", "Line 1", "Line 2", "Line 3"];
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		const viewport = terminal.getViewport();
@@ -327,11 +347,13 @@ describe("TUI differential rendering", () => {
 
 		component.lines = ["Line 0", "Line 1", "Line 2", "Line 3"];
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		// Change only last line
 		component.lines = ["Line 0", "Line 1", "Line 2", "CHANGED"];
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		const viewport = terminal.getViewport();
@@ -351,11 +373,13 @@ describe("TUI differential rendering", () => {
 
 		component.lines = ["Line 0", "Line 1", "Line 2", "Line 3", "Line 4"];
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		// Change lines 1 and 3, keep 0, 2, 4 the same
 		component.lines = ["Line 0", "CHANGED 1", "Line 2", "CHANGED 3", "Line 4"];
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		const viewport = terminal.getViewport();
@@ -377,6 +401,7 @@ describe("TUI differential rendering", () => {
 		// Start with content
 		component.lines = ["Line 0", "Line 1", "Line 2"];
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		let viewport = terminal.getViewport();
@@ -385,11 +410,13 @@ describe("TUI differential rendering", () => {
 		// Clear to empty
 		component.lines = [];
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		// Add content back - this should work correctly even after empty state
 		component.lines = ["New Line 0", "New Line 1"];
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		viewport = terminal.getViewport();
@@ -407,12 +434,14 @@ describe("TUI differential rendering", () => {
 
 		component.lines = Array.from({ length: 12 }, (_, i) => `Line ${i}`);
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		const initialRedraws = tui.fullRedraws;
 
 		component.lines = Array.from({ length: 7 }, (_, i) => `Line ${i}`);
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		assert.ok(tui.fullRedraws > initialRedraws, "Shrink should trigger a full redraw");
@@ -429,12 +458,14 @@ describe("TUI differential rendering", () => {
 
 		component.lines = Array.from({ length: 8 }, (_, i) => `Line ${i}`);
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		const initialRedraws = tui.fullRedraws;
 
 		component.lines = ["Line 0", "Line 1"];
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		assert.ok(tui.fullRedraws > initialRedraws, "Shrink should reset the viewport with a full redraw");
@@ -442,6 +473,7 @@ describe("TUI differential rendering", () => {
 
 		component.lines = ["Line 0", "Line 1", "Line 2"];
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		assert.strictEqual(tui.fullRedraws, redrawsAfterShrink, "Append should stay on the differential path");
@@ -466,19 +498,23 @@ describe("TUI differential rendering", () => {
 		chat.lines = longChat;
 		editor.lines = editorLines;
 		tui.start();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		editor.lines = selectorLines;
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		editor.lines = editorLines;
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		const redrawsBeforeSwitch = tui.fullRedraws;
 		chat.lines = shortChat;
 		tui.requestRender();
+		await tui.whenRendered();
 		await terminal.flush();
 
 		assert.ok(tui.fullRedraws > redrawsBeforeSwitch, "Branch switch should trigger a full redraw");

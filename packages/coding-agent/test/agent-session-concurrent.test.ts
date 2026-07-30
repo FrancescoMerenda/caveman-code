@@ -57,6 +57,24 @@ function createAssistantMessage(text: string): AssistantMessage {
 	};
 }
 
+/**
+ * Wait until the session has actually started streaming.
+ *
+ * `prompt()` does async startup work (settings, resources, extension hooks)
+ * before the first stream event, and that takes hundreds of milliseconds on a
+ * cold session — a fixed short sleep here is a race that fails on slower
+ * machines. Poll instead.
+ */
+async function waitForStreaming(target: AgentSession, timeoutMs = 10_000): Promise<void> {
+	const start = Date.now();
+	while (!target.isStreaming) {
+		if (Date.now() - start > timeoutMs) {
+			throw new Error(`Timed out after ${timeoutMs}ms waiting for the session to start streaming`);
+		}
+		await new Promise((resolve) => setTimeout(resolve, 5));
+	}
+}
+
 describe("AgentSession concurrent prompt guard", () => {
 	let session: AgentSession;
 	let tempDir: string;
@@ -133,7 +151,7 @@ describe("AgentSession concurrent prompt guard", () => {
 		const firstPrompt = session.prompt("First message");
 
 		// Wait a tick for isStreaming to be set
-		await new Promise((resolve) => setTimeout(resolve, 10));
+		await waitForStreaming(session);
 
 		// Verify we're streaming
 		expect(session.isStreaming).toBe(true);
@@ -153,7 +171,7 @@ describe("AgentSession concurrent prompt guard", () => {
 
 		// Start first prompt
 		const firstPrompt = session.prompt("First message");
-		await new Promise((resolve) => setTimeout(resolve, 10));
+		await waitForStreaming(session);
 
 		// steer should work while streaming
 		expect(() => session.steer("Steering message")).not.toThrow();
@@ -169,7 +187,7 @@ describe("AgentSession concurrent prompt guard", () => {
 
 		// Start first prompt
 		const firstPrompt = session.prompt("First message");
-		await new Promise((resolve) => setTimeout(resolve, 10));
+		await waitForStreaming(session);
 
 		// followUp should work while streaming
 		expect(() => session.followUp("Follow-up message")).not.toThrow();
@@ -264,7 +282,7 @@ describe("AgentSession concurrent prompt guard", () => {
 		});
 
 		const firstPrompt = session.prompt("First message");
-		await new Promise((resolve) => setTimeout(resolve, 10));
+		await waitForStreaming(session);
 		expect(session.isStreaming).toBe(true);
 
 		const pi = (
@@ -422,45 +440,34 @@ describe("AgentSession concurrent prompt guard", () => {
 		const modelRegistry = ModelRegistry.create(authStorage, tempDir);
 		authStorage.setRuntimeApiKey("anthropic", "test-key");
 
+		// The tool_call handler has to come from a real extension: AgentSession
+		// rebuilds its ExtensionRunner during prompt() (it always appends the
+		// synthetic hooks extension), so a runner assigned onto the instance
+		// beforehand is discarded before the first tool call.
+		const snapshots: string[][] = [];
+		const extensionsResult = await createTestExtensionsResult([
+			(pi) => {
+				pi.on("tool_call", async () => {
+					snapshots.push(
+						sessionManager
+							.getEntries()
+							.filter((entry) => entry.type === "message")
+							.map((entry) => entry.message.role),
+					);
+					return undefined;
+				});
+			},
+		]);
+
 		session = new AgentSession({
 			agent,
 			sessionManager,
 			settingsManager,
 			cwd: tempDir,
 			modelRegistry,
-			resourceLoader: createTestResourceLoader(),
+			resourceLoader: createTestResourceLoader({ extensionsResult }),
 			baseToolsOverride: { dummy: tool },
 		});
-
-		const snapshots: string[][] = [];
-		const sessionWithRunner = session as unknown as {
-			_extensionRunner?: {
-				hasHandlers: (eventType: string) => boolean;
-				emit: (event: { type: string; message?: { role?: string } }) => Promise<void>;
-				emitToolCall: (event: { type: string; toolCallId: string }) => Promise<undefined>;
-				emitInput: (
-					text: string,
-					images: unknown,
-					source: "interactive" | "rpc" | "extension",
-				) => Promise<{ action: "continue" }>;
-				emitBeforeAgentStart: (prompt: string, images: unknown, systemPrompt: string) => Promise<undefined>;
-			};
-		};
-		sessionWithRunner._extensionRunner = {
-			hasHandlers: (eventType) => eventType === "tool_call",
-			emit: async () => {},
-			emitToolCall: async () => {
-				snapshots.push(
-					sessionManager
-						.getEntries()
-						.filter((entry) => entry.type === "message")
-						.map((entry) => entry.message.role),
-				);
-				return undefined;
-			},
-			emitInput: async () => ({ action: "continue" }),
-			emitBeforeAgentStart: async () => undefined,
-		};
 
 		await session.prompt("hi");
 		await session.agent.waitForIdle();
@@ -559,38 +566,27 @@ describe("AgentSession concurrent prompt guard", () => {
 		const modelRegistry = ModelRegistry.create(authStorage, tempDir);
 		authStorage.setRuntimeApiKey("anthropic", "test-key");
 
+		// Slow message_end handler comes from a real extension — a runner assigned
+		// onto the session instance is thrown away when prompt() rebuilds it.
+		const extensionsResult = await createTestExtensionsResult([
+			(pi) => {
+				pi.on("message_end", async (event) => {
+					if (event.message?.role === "assistant") {
+						await new Promise((resolve) => setTimeout(resolve, 40));
+					}
+				});
+			},
+		]);
+
 		session = new AgentSession({
 			agent,
 			sessionManager,
 			settingsManager,
 			cwd: tempDir,
 			modelRegistry,
-			resourceLoader: createTestResourceLoader(),
+			resourceLoader: createTestResourceLoader({ extensionsResult }),
 			baseToolsOverride: { dummy: tool },
 		});
-
-		const sessionWithRunner = session as unknown as {
-			_extensionRunner?: {
-				hasHandlers: (eventType: string) => boolean;
-				emit: (event: { type: string; message?: { role?: string } }) => Promise<void>;
-				emitInput: (
-					text: string,
-					images: unknown,
-					source: "interactive" | "rpc" | "extension",
-				) => Promise<{ action: "continue" }>;
-				emitBeforeAgentStart: (prompt: string, images: unknown, systemPrompt: string) => Promise<undefined>;
-			};
-		};
-		sessionWithRunner._extensionRunner = {
-			hasHandlers: () => false,
-			emit: async (event) => {
-				if (event.type === "message_end" && event.message?.role === "assistant") {
-					await new Promise((resolve) => setTimeout(resolve, 40));
-				}
-			},
-			emitInput: async () => ({ action: "continue" }),
-			emitBeforeAgentStart: async () => undefined,
-		};
 
 		await session.prompt("hi");
 		await session.agent.waitForIdle();
